@@ -91,12 +91,10 @@ class MKAF(nn.Module):
             att_aud = torch.mm(aud_fts.transpose(0, 1), a_t.transpose(0, 1))
             audio_att = self.tanh(torch.div(att_aud, math.sqrt(aud_vis_fts.shape[1])))
 
-            aud_vis_fts = torch.cat((aud_fts, vis_fts, tex_fts), 1)
             v_t = self.affine_v(aud_vis_fts.transpose(0, 1))
             att_vis = torch.mm(vis_fts.transpose(0, 1), v_t.transpose(0, 1))
             vis_att = self.tanh(torch.div(att_vis, math.sqrt(aud_vis_fts.shape[1])))
 
-            aud_vis_fts = torch.cat((aud_fts, vis_fts, tex_fts), 1)
             t_t = self.affine_t(aud_vis_fts.transpose(0, 1))
             att_tex = torch.mm(tex_fts.transpose(0, 1), t_t.transpose(0, 1))
             tex_att = self.tanh(torch.div(att_tex, math.sqrt(aud_vis_fts.shape[1])))
