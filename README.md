@@ -2,8 +2,6 @@
 
 **Cross-Modality Heterogeneous Knowledge Fusion for Weakly Supervised Video Anomaly Detection**
 
-Guohua Wang\*, Shengping Song\*, Wuchun He, Yongsen Zheng<br>South China Agricultural University · Nanyang Technological University<br>\* Equal contribution
-
 [![ACL 2025](https://img.shields.io/badge/ACL-2025-blue)](https://aclanthology.org/2025.acl-long.1524/) [![Paper PDF](https://img.shields.io/badge/Paper-PDF-red)](https://aclanthology.org/2025.acl-long.1524.pdf) [![License](https://img.shields.io/badge/License-Apache--2.0-green)](LICENSE)
 
 CMHKF 面向**弱监督视频异常检测（WSVAD）**：训练时仅使用视频级标签，测试时定位异常发生的时间，并识别异常类别。模型融合视频、音频和类别文本中的互补信息，同时支持正常/异常检测与细粒度异常定位。
@@ -14,7 +12,7 @@ CMHKF 面向**弱监督视频异常检测（WSVAD）**：训练时仅使用视�
 
 ![CMHKF 整体架构](docs/images/cmhkf-framework.png)
 
-*图源：论文 Figure 1，Guohua Wang et al., ACL 2025，见[论文](https://aclanthology.org/2025.acl-long.1524/)。*
+*图源：ACL 2025 论文 Figure 1，见[论文](https://aclanthology.org/2025.acl-long.1524/)。*
 
 - **视频时序建模**：使用 CLIP ViT-B/16 视觉特征，通过 Local Transformer 和 Global GCN 建模局部及全局时序关系。
 - **CVKA（Cross-Modality Video-Text Knowledge Alignment）**：选择与视频最相关的类别文本，将文本语义对齐到视频时间维度。
