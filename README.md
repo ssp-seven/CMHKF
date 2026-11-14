@@ -34,7 +34,7 @@ The model uses the CLIP implementation in `src/clip/`. The first run downloads t
 
 ## Data preparation
 
-Download [XD-Violence](https://roc-ng.github.io/XD-Violence/) and prepare temporally aligned NumPy features for each video:
+Download [XD-Violence](https://roc-ng.github.io/XD-Violence/) and prepare temporally aligned `float32` NumPy features for each video:
 
 - CLIP ViT-B/16 video features with shape `[T, 512]`.
 - VGGish audio features with shape `[T, 128]`.
@@ -48,100 +48,28 @@ Update the `path` column in the following CSV files to point to your local featu
 | Train | `list/xd_CLIP_rgb.csv` | `list/xd_audio.csv` |
 | Test | `list/xd_CLIP_rgbtest.csv` | `list/xd_audio_test.csv` |
 
-Each CSV uses a `path,label` header. Video and audio entries are paired **by row**, so keep their order aligned. The training list contains multiple visual crops per video with the corresponding audio path repeated. Keep the test list in the same order as the evaluation annotations.
+Each CSV uses a `path,label` header. Replace only the `path` values with absolute paths to your feature files. Keep the video and audio rows paired and preserve the test order. The training list contains multiple visual crops per video with the corresponding audio path repeated.
 
-After updating the paths, run the following from the repository root to generate the frame-level and segment-level ground truth needed for both training and evaluation:
-
-<details>
-<summary>Generate evaluation annotations</summary>
-
-```bash
-python - <<'PY'
-import csv
-import re
-from pathlib import Path
-import numpy as np
-
-root = Path('list')
-
-def read_annotations(filename):
-    result = {}
-    for line in (root / filename).read_text().splitlines():
-        fields = line.split()
-        if fields:
-            name = fields[0]
-            if name.endswith('.mp4'):
-                name = name[:-4]
-            result[name] = fields[1:]
-    return result
-
-binary = read_annotations('annotations.txt')
-multiclass = read_annotations('annotations_multiclasses.txt')
-frames, segments, labels = [], [], []
-with (root / 'xd_CLIP_rgbtest.csv').open(newline='') as f:
-    for row in csv.DictReader(f):
-        name = re.sub(r'__\d+\.npy$', '', Path(row['path']).name)
-        frame_count = np.load(row['path'], mmap_mode='r').shape[0] * 16
-        gt = np.zeros(frame_count, dtype=np.float32)
-        if row['label'] == 'A':
-            video_segments, video_labels = [[0, frame_count]], ['A']
-        else:
-            bounds = list(map(int, binary[name]))
-            for start, end in zip(bounds[::2], bounds[1::2]):
-                gt[start:end] = 1
-            events = multiclass[name]
-            video_segments = [[int(events[i + 1]), int(events[i + 2])]
-                              for i in range(0, len(events), 3)]
-            video_labels = events[::3]
-        frames.append(gt)
-        segments.append(video_segments)
-        labels.append(video_labels)
-
-np.save(root / 'gt_xd.npy', np.concatenate(frames))
-np.save(root / 'gt_segment.npy', np.array(segments, dtype=object))
-np.save(root / 'gt_label.npy', np.array(labels, dtype=object))
-print(f'Generated annotations for {len(segments)} videos.')
-PY
-```
-
-</details>
-
-This creates `list/gt_xd.npy`, `list/gt_segment.npy`, and `list/gt_label.npy` in test-list order.
+The default test list uses the ground truth already in `list/gt.npy`, `list/gt_segment.npy`, and `list/gt_label.npy`. Use test features that match the annotations for each video. The total number of video feature steps multiplied by 16 must equal the length of `list/gt.npy`.
 
 ## Training
 
-Run the following from the repository root:
+From the repository root, run:
 
 ```bash
 cd src
 mkdir -p ../model
-
-CUDA_VISIBLE_DEVICES=0 python train.py \
-  --train-list ../list/xd_CLIP_rgb.csv \
-  --train-audio-list ../list/xd_audio.csv \
-  --test-list ../list/xd_CLIP_rgbtest.csv \
-  --test-audio-list ../list/xd_audio_test.csv \
-  --gt-path ../list/gt_xd.npy \
-  --gt-segment-path ../list/gt_segment.npy \
-  --gt-label-path ../list/gt_label.npy \
-  --model-path ../model/model.pth \
-  --checkpoint-path ../model/checkpoint.pth
+CUDA_VISIBLE_DEVICES=0 python train.py
 ```
 
-The training script periodically evaluates the model and saves the best model weights to `model/model.pth`. See `src/option.py` for available options and defaults.
+The training script evaluates the model periodically and saves weights to `model/model.pth` when average precision improves. See `src/option.py` for the default paths and options.
 
 ## Evaluation
 
-After training, run the following from the `src/` directory:
+After training has saved `model/model.pth`, run from `src/`:
 
 ```bash
-CUDA_VISIBLE_DEVICES=0 python test.py \
-  --model-path ../model/model.pth \
-  --test-list ../list/xd_CLIP_rgbtest.csv \
-  --test-audio-list ../list/xd_audio_test.csv \
-  --gt-path ../list/gt_xd.npy \
-  --gt-segment-path ../list/gt_segment.npy \
-  --gt-label-path ../list/gt_label.npy
+CUDA_VISIBLE_DEVICES=0 python test.py
 ```
 
 The script reports frame-level detection and temporal localization metrics.
